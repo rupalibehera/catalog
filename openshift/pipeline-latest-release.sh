@@ -6,7 +6,7 @@
 # If not it exit 1
 # It can take the argument --only-stable-release to not do nightly but only detect the pipeline version
 
-MAX_SHIFT=1
+MAX_SHIFT=2
 NIGHTLY_RELEASE="https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-next/openshift/release/tektoncd-pipeline-nightly.yaml"
 STABLE_RELEASE_URL='https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-${version}/openshift/release/tektoncd-pipeline-${version}.yaml'
 
