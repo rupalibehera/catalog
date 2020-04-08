@@ -93,13 +93,14 @@ for runtest in ${PRIVILEGED_TESTS};do
     function pre-apply-taskrun-hook() {
         cp ${TMPF} ${TMPF2}
         python openshift/e2e-add-service-account.py ${SERVICE_ACCOUNT} < ${TMPF2} > ${TMPF}
-        grep -q TaskRun ${TMPF} && oc adm policy add-scc-to-user privileged system:serviceaccount:${tns}:${SERVICE_ACCOUNT} || true
+        oc adm policy add-scc-to-user privileged system:serviceaccount:${tns}:${SERVICE_ACCOUNT} || true
     }
     unset -f pre-apply-task-hook || true
 
     test_task_creation ${runtest}/tests
 done
 
+exit
 # Run the non privileged tests
 for runtest in */tests;do
     btest=$(basename $(dirname $runtest))
