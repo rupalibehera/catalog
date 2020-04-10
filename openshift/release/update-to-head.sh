@@ -6,25 +6,26 @@
 set -e
 REPO_NAME=`basename $(git rev-parse --show-toplevel)`
 BRANCH=${BRANCH:-v1beta1}
+OPENSHIFT_REMOTE=${OPENSHIFT_REMOTE:-openshift}
 
 # Reset release-next to upstream/master.
 git fetch upstream master
 git checkout upstream/${BRANCH} --no-track -B release-next
 
 # Update openshift's master and take all needed files from there.
-git fetch openshift master
-git checkout openshift/master openshift OWNERS_ALIASES OWNERS
+git fetch ${OPENSHIFT_REMOTE} master
+git checkout ${OPENSHIFT_REMOTE}/master openshift OWNERS_ALIASES OWNERS
 git add openshift OWNERS_ALIASES OWNERS
 git commit -m ":open_file_folder: Update openshift specific files."
 
-git push -f openshift HEAD:release-next
+git push -f ${OPENSHIFT_REMOTE} HEAD:release-next
 
 # Trigger CI
 git checkout release-next --no-track -B release-next-ci
 date > ci
 git add ci
 git commit -m ":robot: Triggering CI on branch 'release-next' after synching to upstream/master"
-git push -f openshift HEAD:release-next-ci
+git push -f ${OPENSHIFT_REMOTE} HEAD:release-next-ci
 
 if hash hub 2>/dev/null; then
    hub pull-request --no-edit -l "kind/sync-fork-to-upstream" -b openshift/${REPO_NAME}:release-next -h openshift/${REPO_NAME}:release-next-ci
