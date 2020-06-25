@@ -21,10 +21,10 @@ echo "===== Resetting branch ${release} based on ${tag}"
 # Fetch the latest tags and checkout a new branch from the wanted tag.
 git fetch upstream --tags
 
-echo "===== Checkout upstream/v1beta1 as base"
-git checkout --no-track -B "${release}" upstream/v1beta1
+echo "===== Checkout upstream/master as base"
+git checkout --no-track -B "${release}" upstream/master
 
-echo "===== Adding openshift specific files from openshift/v1beta1"
+echo "===== Adding openshift specific files from openshift/master"
 git fetch openshift master
 git checkout openshift/master -- openshift OWNERS_ALIASES OWNERS
 

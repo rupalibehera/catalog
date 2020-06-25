@@ -5,11 +5,11 @@
 
 set -e
 REPO_NAME=`basename $(git rev-parse --show-toplevel)`
-BRANCH=${BRANCH:-v1beta1}
+BRANCH=${BRANCH:-master}
 OPENSHIFT_REMOTE=${OPENSHIFT_REMOTE:-openshift}
 
-# Reset release-next to upstream/v1beta1.
-git fetch upstream v1beta1
+# Reset release-next to upstream/master.
+git fetch upstream ${BRANCH}
 git checkout upstream/${BRANCH} --no-track -B release-next
 
 # Update openshift's master and take all needed files from there.
