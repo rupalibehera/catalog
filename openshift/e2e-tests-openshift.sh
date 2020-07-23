@@ -14,7 +14,7 @@ source $(dirname $0)/../test/e2e-common.sh
 cd $(dirname $(readlink -f $0))/..
 
 # Give these tests the priviliged rights
-PRIVILEGED_TESTS="buildah buildpacks jib-gradle kaniko s2i"
+PRIVILEGED_TESTS="buildah buildpacks buildpacks-phases jib-gradle kaniko kythe-go s2i"
 
 # Skip Those
 SKIP_TESTS=""
@@ -43,8 +43,7 @@ fi
 # repos and launch the tests.
 function pipelines_catalog() {
     set -x
-    local oldRepoRootDir
-    local ptest parent
+    local ptest parent parentWithVersion
 
     [[ -d ${PIPELINES_CATALOG_DIRECTORY} ]] || \
         git clone ${PIPELINES_CATALOG_URL} ${PIPELINES_CATALOG_DIRECTORY}
@@ -55,15 +54,16 @@ function pipelines_catalog() {
 
     # NOTE(chmouel): The functions doesnt support argument so we can't just leave the test in
     # ${PIPELINES_CATALOG_DIRECTORY} we need to have it in the top dir, TODO: fix the functions
-    for ptest in ${PIPELINES_CATALOG_DIRECTORY}/*/tests;do
-        parent=$(dirname ${ptest})
+    for ptest in ${PIPELINES_CATALOG_DIRECTORY}/task/*/*/tests;do
+        parentWithVersion=$(dirname ${ptest})
+        parent=$(dirname ${parentWithVersion})
         base=$(basename ${parent})
         in_array ${base} ${PIPELINES_CATALOG_IGNORE} && { echo "Skipping: ${base}"; continue ;}
-        [[ -d ./${base} ]] || cp -a ${parent} ./${base}
+        [[ -d ./task/${base} ]] || cp -a ${parent} ./task/${base}
 
         # TODO(chmouel): Add S2I Images as PRIVILEGED_TESTS, that's not very
         # flexible and we may want to find some better way.
-        [[ ${ptest} == ${PIPELINES_CATALOG_DIRECTORY}/${PIPELINES_CATALOG_PRIVILIGED_TASKS} ]] && \
+        [[ ${parent} == ${PIPELINES_CATALOG_DIRECTORY}/task/${PIPELINES_CATALOG_PRIVILIGED_TASKS} ]] && \
             PRIVILEGED_TESTS="${PRIVILEGED_TESTS} ${base}"
     done
     set +x
@@ -92,18 +92,17 @@ for runtest in ${PRIVILEGED_TESTS};do
     # Add here the pre-apply-taskrun-hook function so we can do our magic to add the serviceAccount on the TaskRuns,
     function pre-apply-taskrun-hook() {
         cp ${TMPF} ${TMPF2}
-        python openshift/e2e-add-service-account.py ${SERVICE_ACCOUNT} < ${TMPF2} > ${TMPF}
+        python3 openshift/e2e-add-service-account.py ${SERVICE_ACCOUNT} < ${TMPF2} > ${TMPF}
         oc adm policy add-scc-to-user privileged system:serviceaccount:${tns}:${SERVICE_ACCOUNT} || true
     }
     unset -f pre-apply-task-hook || true
 
-    test_task_creation ${runtest}/tests
+    test_task_creation task/${runtest}/*/tests
 done
 
-exit
 # Run the non privileged tests
-for runtest in */tests;do
-    btest=$(basename $(dirname $runtest))
+for runtest in task/*/*/tests;do
+    btest=$(basename $(dirname $(dirname $runtest)))
     in_array ${btest} ${SKIP_TESTS} && { echo "Skipping: ${btest}"; continue ;}
     in_array ${btest} ${PRIVILEGED_TESTS} && continue # We did them previously
 
@@ -116,3 +115,5 @@ for runtest in */tests;do
     echo "---------------------------"
     test_task_creation ${runtest}
 done
+
+exit
