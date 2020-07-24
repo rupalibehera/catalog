@@ -17,7 +17,7 @@ cd $(dirname $(readlink -f $0))/..
 PRIVILEGED_TESTS="buildah buildpacks buildpacks-phases jib-gradle kaniko kythe-go s2i"
 
 # Skip Those
-SKIP_TESTS=""
+SKIP_TESTS="docker-build"
 
 # Service Account used for image builder
 SERVICE_ACCOUNT=builder
