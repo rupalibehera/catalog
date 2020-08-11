@@ -31,7 +31,7 @@ PIPELINES_CATALOG_REF=${PIPELINES_CATALOG_REF:-origin/master}
 PIPELINES_CATALOG_DIRECTORY=./openshift/pipelines-catalog
 # We are skipping e2e test for dotnet3 as the builder image is not publicly available yet
 PIPELINES_CATALOG_IGNORE="s2i-dotnet-3 s2i-dotnet-3-pr"
-PIPELINES_CATALOG_PRIVILIGED_TASKS="s2i-*"
+PIPELINES_CATALOG_PRIVILIGED_TASKS="s2i-* buildah-pr"
 
 CURRENT_TAG=$(git describe --tags 2>/dev/null || true)
 if [[ -n ${CURRENT_TAG} ]];then
@@ -55,15 +55,14 @@ function pipelines_catalog() {
     # NOTE(chmouel): The functions doesnt support argument so we can't just leave the test in
     # ${PIPELINES_CATALOG_DIRECTORY} we need to have it in the top dir, TODO: fix the functions
     for ptest in ${PIPELINES_CATALOG_DIRECTORY}/task/*/*/tests;do
-        parentWithVersion=$(dirname ${ptest})
-        parent=$(dirname ${parentWithVersion})
+        parent=$(dirname $(dirname ${ptest}))
         base=$(basename ${parent})
         in_array ${base} ${PIPELINES_CATALOG_IGNORE} && { echo "Skipping: ${base}"; continue ;}
         [[ -d ./task/${base} ]] || cp -a ${parent} ./task/${base}
 
         # TODO(chmouel): Add S2I Images as PRIVILEGED_TESTS, that's not very
         # flexible and we may want to find some better way.
-        [[ ${parent} == ${PIPELINES_CATALOG_DIRECTORY}/task/${PIPELINES_CATALOG_PRIVILIGED_TASKS} ]] && \
+        in_array ${base} ${PIPELINES_CATALOG_PRIVILIGED_TASKS} && \
             PRIVILEGED_TESTS="${PRIVILEGED_TESTS} ${base}"
     done
     set +x
@@ -73,7 +72,7 @@ function pipelines_catalog() {
 function in_array() {
     param=$1;shift
     for elem in $@;do
-        [[ "$param" == "$elem" ]] && return 0;
+        [[ $param == $elem ]] && return 0;
     done
     return 1
 }
