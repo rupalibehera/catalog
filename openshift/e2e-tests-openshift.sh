@@ -4,6 +4,24 @@
 #
 set -e
 
+function check-service-endpoints() {
+  service=${1}
+  namespace=${2}
+  echo "-----------------------"
+  echo "checking ${namespace}/${service} service endpoints"
+  count=0
+  while [[ -z $(kubectl get endpoints ${service} -n ${namespace} -o jsonpath='{.subsets}') ]]; do
+    # retry for 15 mins
+    sleep 10
+    if [[ $count -gt 90 ]]; then
+      echo ${namespace}/${service} endpoints unavailable
+      exit 1
+    fi
+    echo waiting for ${namespace}/${service} endpoints
+    count=$(( count+1 ))
+  done
+}
+
 # Create some temporary file to work with, we will delete them right after exiting
 TMPF2=$(mktemp /tmp/.mm.XXXXXX)
 TMPF=$(mktemp /tmp/.mm.XXXXXX)
@@ -24,6 +42,9 @@ SERVICE_ACCOUNT=builder
 
 # Install CI
 [[ -z ${LOCAL_CI_RUN} ]] && install_pipeline_crd
+
+# list tekton-pipelines-webhook service endpoints
+check-service-endpoints "tekton-pipelines-webhook" "tekton-pipelines"
 
 # Pipelines Catalog Repository
 PIPELINES_CATALOG_URL=${PIPELINES_CATALOG_URL:-https://github.com/openshift/pipelines-catalog/}
