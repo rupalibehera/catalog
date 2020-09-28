@@ -101,7 +101,12 @@ function in_array() {
 pipelines_catalog
 
 # Test if yamls can install
-test_yaml_can_install
+until test_yaml_can_install; do
+  echo "-----------------------"
+  echo 'retry test_yaml_can_install'
+  echo "-----------------------"
+  sleep 5
+done
 
 # Run the privileged tests
 for runtest in ${PRIVILEGED_TESTS};do
