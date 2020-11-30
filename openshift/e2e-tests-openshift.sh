@@ -32,10 +32,10 @@ source $(dirname $0)/../test/e2e-common.sh
 cd $(dirname $(readlink -f $0))/..
 
 # Give these tests the priviliged rights
-PRIVILEGED_TESTS="buildah buildpacks buildpacks-phases jib-gradle kaniko kythe-go orka-full s2i"
+PRIVILEGED_TESTS="buildah buildpacks buildpacks-phases jib-gradle kaniko kythe-go orka-full s2i docker-build"
 
 # Skip Those
-SKIP_TESTS="docker-build"
+SKIP_TESTS="docker-build orka-full"
 
 # Service Account used for image builder
 SERVICE_ACCOUNT=builder
@@ -109,7 +109,8 @@ until test_yaml_can_install; do
 done
 
 # Run the privileged tests
-for runtest in ${PRIVILEGED_TESTS};do
+for runtest in ${PRIVILEGED_TESTS}; do
+    in_array ${runtest} ${SKIP_TESTS} && { echo "Skipping: ${runtest}"; continue ;}
     echo "-----------------------"
     echo "Running privileged test: ${runtest}"
     echo "-----------------------"
