@@ -21,13 +21,6 @@ SKIP_TESTS="docker-build orka-full"
 # Service Account used for image builder
 SERVICE_ACCOUNT=builder
 
-# Pipelines Catalog Repository
-PIPELINES_CATALOG_URL=${PIPELINES_CATALOG_URL:-https://github.com/openshift/pipelines-catalog/}
-PIPELINES_CATALOG_REF=${PIPELINES_CATALOG_REF:-origin/master}
-PIPELINES_CATALOG_DIRECTORY=./openshift/pipelines-catalog
-PIPELINES_CATALOG_IGNORE=""
-PIPELINES_CATALOG_PRIVILIGED_TASKS="s2i-* buildah-pr"
-
 function check-service-endpoints() {
   service=${1}
   namespace=${2}
@@ -62,37 +55,6 @@ cd $(dirname $(readlink -f $0))/..
 check-service-endpoints "tekton-pipelines-webhook" "tekton-pipelines"
 
 CURRENT_TAG=$(git describe --tags 2>/dev/null || true)
-if [[ -n ${CURRENT_TAG} ]];then
-    PIPELINES_CATALOG_REF=origin/release-$(echo ${CURRENT_TAG}|sed -e 's/.*\(v[0-9]*\.[0-9]*\).*/\1/')
-fi
-
-# Add PIPELINES_CATALOG in here so we can do the CI all together.
-# We checkout the repo in ${PIPELINES_CATALOG_DIRECTORY}, merge them in the main
-# repos and launch the tests.
-function pipelines_catalog() {
-    local ptest parent parentWithVersion
-
-    [[ -d ${PIPELINES_CATALOG_DIRECTORY} ]] || \
-        git clone ${PIPELINES_CATALOG_URL} ${PIPELINES_CATALOG_DIRECTORY}
-
-    pushd ${PIPELINES_CATALOG_DIRECTORY} >/dev/null && \
-        git reset --hard ${PIPELINES_CATALOG_REF} &&
-        popd >/dev/null
-
-    # NOTE(chmouel): The functions doesnt support argument so we can't just leave the test in
-    # ${PIPELINES_CATALOG_DIRECTORY} we need to have it in the top dir, TODO: fix the functions
-    for ptest in ${PIPELINES_CATALOG_DIRECTORY}/task/*/*/tests;do
-        parent=$(dirname $(dirname ${ptest}))
-        base=$(basename ${parent})
-        in_array ${base} ${PIPELINES_CATALOG_IGNORE} && { echo "Skipping: ${base}"; continue ;}
-        [[ -d ./task/${base} ]] || cp -a ${parent} ./task/${base}
-
-        # TODO(chmouel): Add S2I Images as PRIVILEGED_TESTS, that's not very
-        # flexible and we may want to find some better way.
-        in_array ${base} ${PIPELINES_CATALOG_PRIVILIGED_TASKS} && \
-            PRIVILEGED_TESTS="${PRIVILEGED_TESTS} ${base}"
-    done
-}
 
 # in_array function: https://www.php.net/manual/en/function.in-array.php :-D
 function in_array() {
@@ -187,9 +149,6 @@ function test_non_privileged {
         test_task_creation ${task_to_tests}
     fi
 }
-
-# Checkout Pipelines Catalog and test
-pipelines_catalog
 
 # Test if yamls can install
 until test_yaml_can_install; do
