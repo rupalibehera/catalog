@@ -13,10 +13,14 @@ MAX_NUMBERS_OF_PARALLEL_TASKS=4
 KUBECTL_CMD="kubectl --cache-dir=/tmp/cache"
 
 # Give these tests the priviliged rights
-PRIVILEGED_TESTS="buildah buildpacks buildpacks-phases jib-gradle kaniko kythe-go s2i"
+PRIVILEGED_TESTS="buildah buildpacks buildpacks-phases jib-gradle kaniko kythe-go orka-init orka-teardown s2i"
 
 # Skip those tests when they really can't work in OpenShift
-SKIP_TESTS="docker-build orka-full"
+SKIP_TESTS="docker-build orka-full orka-deploy"
+
+# Orka Tasks which can be tested as privileged but existing SA needs to be used
+# to give privileged access
+ORKA_TASKS="orka-init orka-teardown"
 
 # Service Account used for image builder
 SERVICE_ACCOUNT=builder
@@ -71,14 +75,18 @@ function test_privileged {
 
     # Run the privileged tests
     for runtest in $@;do
-        btest=$(basename $(dirname $(dirname $runtest)))
-        in_array ${btest} ${SKIP_TESTS} && { echo "Skipping: ${btest}"; continue ;}
+        in_array ${runtest} ${SKIP_TESTS} && { echo "Skipping: ${runtest}"; continue ;}
 
         # Add here the pre-apply-taskrun-hook function so we can do our magic to add the serviceAccount on the TaskRuns,
         function pre-apply-taskrun-hook() {
-            cp ${TMPF} ${TMPF2}
-            python3 openshift/e2e-add-service-account.py ${SERVICE_ACCOUNT} < ${TMPF2} > ${TMPF}
-            oc adm policy add-scc-to-user privileged system:serviceaccount:${tns}:${SERVICE_ACCOUNT} || true
+            btest=$(basename $(dirname $(dirname $runtest)))
+            if $(in_array ${btest} ${ORKA_TASKS}); then
+                oc adm policy add-scc-to-user privileged system:serviceaccount:${tns}:orka-svc || true
+            else
+                cp ${TMPF} ${TMPF2}
+                python3 openshift/e2e-add-service-account.py ${SERVICE_ACCOUNT} < ${TMPF2} > ${TMPF}
+                oc adm policy add-scc-to-user privileged system:serviceaccount:${tns}:${SERVICE_ACCOUNT} || true
+            fi
         }
         unset -f pre-apply-task-hook || true
 
