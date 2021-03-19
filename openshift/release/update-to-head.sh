@@ -5,10 +5,10 @@
 
 set -e
 REPO_NAME=`basename $(git rev-parse --show-toplevel)`
-BRANCH=${BRANCH:-master}
+BRANCH=${BRANCH:-main}
 OPENSHIFT_REMOTE=${OPENSHIFT_REMOTE:-openshift}
 
-# Reset release-next to upstream/master.
+# Reset release-next to upstream/main.
 git fetch upstream ${BRANCH}
 git checkout upstream/${BRANCH} --no-track -B release-next
 
@@ -24,7 +24,7 @@ git push -f ${OPENSHIFT_REMOTE} HEAD:release-next
 git checkout release-next --no-track -B release-next-ci
 date > ci
 git add ci
-git commit -m ":robot: Triggering CI on branch 'release-next' after synching to upstream/master"
+git commit -m ":robot: Triggering CI on branch 'release-next' after synching to upstream/main"
 git push -f ${OPENSHIFT_REMOTE} HEAD:release-next-ci
 
 if hash hub 2>/dev/null; then
