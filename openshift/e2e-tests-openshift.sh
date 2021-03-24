@@ -43,6 +43,15 @@ function check-service-endpoints() {
   done
 }
 
+function check-for-deployment-availability() {
+    deployment=${1}
+    namespace=${2}
+    echo -e "\nWaiting for deployment ${deployment} availability in namespace ${namespace}"
+    ${KUBECTL_CMD} wait --for=condition=Available -n ${namespace} deployment ${deployment} --timeout=5m
+    retval=$?
+    if [[ "${retval}" -gt 0 ]]; then exit "${retval}"; fi
+}
+
 # Create some temporary file to work with, we will delete them right after exiting
 TMPF2=$(mktemp /tmp/.mm.XXXXXX)
 TMPF=$(mktemp /tmp/.mm.XXXXXX)
@@ -54,6 +63,10 @@ cd $(dirname $(readlink -f $0))/..
 
 # Install CI
 [[ -z ${LOCAL_CI_RUN} ]] && install_pipeline_crd
+
+# Check for the avaialability of pipelines controller & webhook deployment
+check-for-deployment-availability "tekton-pipelines-controller" "tekton-pipelines"
+check-for-deployment-availability "tekton-pipelines-webhook" "tekton-pipelines"
 
 # list tekton-pipelines-webhook service endpoints
 check-service-endpoints "tekton-pipelines-webhook" "tekton-pipelines"
