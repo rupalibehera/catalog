@@ -8,24 +8,24 @@ REPO_NAME=$(basename $(git rev-parse --show-toplevel))
 BRANCH=${BRANCH:-main}
 OPENSHIFT_REMOTE=${OPENSHIFT_REMOTE:-openshift}
 
-# Reset release-next to upstream/master.
-git fetch upstream master
-git checkout upstream/master -B release-next
+# Reset release-next to upstream/main.
+git fetch upstream ${BRANCH}
+git checkout upstream/${BRANCH} --no-track -B release-next
 
 # Update openshift's master and take all needed files from there.
-git fetch openshift master
-git checkout openshift/master openshift OWNERS_ALIASES OWNERS 
-git add openshift OWNERS_ALIASES OWNERS 
+git fetch ${OPENSHIFT_REMOTE} master
+git checkout ${OPENSHIFT_REMOTE}/master openshift OWNERS_ALIASES OWNERS
+git add openshift OWNERS_ALIASES OWNERS
 git commit -m ":open_file_folder: Update openshift specific files."
 
-git push -f openshift release-next
+git push -f ${OPENSHIFT_REMOTE} HEAD:release-next
 
 # Trigger CI
-git checkout release-next -B release-next-ci
+git checkout release-next --no-track -B release-next-ci
 date > ci
 git add ci
-git commit -m ":robot: Triggering CI on branch 'release-next' after synching to upstream/master"
-git push -f openshift release-next-ci
+git commit -m ":robot: Triggering CI on branch 'release-next' after synching to upstream/main"
+git push -f ${OPENSHIFT_REMOTE} HEAD:release-next-ci
 
 if hash hub 2>/dev/null; then
    # Test if there is already a sync PR in 

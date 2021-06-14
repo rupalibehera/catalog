@@ -1,25 +1,44 @@
 #!/bin/bash -e
+set -eu
 
-# Usage: create-release-branch.sh v0.4.1 release-v0.4.1
+tag=$1
+tag_regexp="^v([0-9]+)\.([0-9]+)\.([0-9]+)"
 
-release=$1
-target=$2
-release_regexp="^release-v([0-9]\.)+([0-9])$"
-
-if [[ ! $release =~ $release_re ]]; then
-    echo "\"$release\" is wrong format. Must have proper format like release-v0.1.2"
+if [[ -z ${tag} ]];then
+    echo "You need specify a tag like v0.9.1"
     exit 1
 fi
 
+if [[ ! $tag =~ $tag_regexp ]];then
+    echo "\"$tag\" is wrong format. Must have proper format like v1.2.3"
+    exit 1
+fi
+
+release=release-v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}
+
+echo "===== Resetting branch ${release} based on ${tag}"
+
 # Fetch the latest tags and checkout a new branch from the wanted tag.
 git fetch upstream --tags
-git checkout -b "$target" "$release"
 
-# Update openshift's master and take all needed files from there.
+echo "===== Checkout upstream/main as base"
+git checkout --no-track -B "${release}" upstream/main
+
+echo "===== Adding openshift specific files from openshift/master"
 git fetch openshift master
-git checkout openshift/master -- openshift OWNERS_ALIASES OWNERS Makefile
-make generate-dockerfiles
-make RELEASE=$release generate-release
-make RELEASE=ci generate-release
-git add openshift OWNERS_ALIASES OWNERS Makefile
-git commit -m "Add openshift specific files."
+git checkout openshift/master -- openshift OWNERS_ALIASES OWNERS
+
+git add openshift OWNERS_ALIASES OWNERS
+git commit -m "Add openshift specific files based on pipeline ${tag}"
+
+echo "===== Creating tag ${tag}"
+git tag --force ${tag}
+
+echo "===== Pushing branch '${release}' to openshift remote"
+git push openshift ${release}
+
+echo "===== Pushing tag '${tag}' to openshift remote"
+git push --tags openshift ${tag}
+
+echo "===== Done"
+echo "$(git remote get-url openshift)/tree/${release}"
