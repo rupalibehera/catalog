@@ -5,6 +5,8 @@
 
 set -e
 REPO_NAME=$(basename $(git rev-parse --show-toplevel))
+BRANCH=${BRANCH:-main}
+OPENSHIFT_REMOTE=${OPENSHIFT_REMOTE:-openshift}
 
 # Reset release-next to upstream/master.
 git fetch upstream master
