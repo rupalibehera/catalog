@@ -3,10 +3,11 @@
 # Synchs the release-next branch to master and then triggers CI
 # Usage: update-to-head.sh
 
-set -e
-REPO_NAME=$(basename $(git rev-parse --show-toplevel))
+set -ex
+REPO_NAME=${REPO_NAME:-tektoncd-catlog}
 BRANCH=${BRANCH:-main}
 OPENSHIFT_REMOTE=${OPENSHIFT_REMOTE:-openshift}
+LABEL=nightly-ci
 
 # Reset release-next to upstream/main.
 git fetch upstream ${BRANCH}
@@ -27,13 +28,15 @@ git add ci
 git commit -m ":robot: Triggering CI on branch 'release-next' after synching to upstream/main"
 git push -f ${OPENSHIFT_REMOTE} HEAD:release-next-ci
 
-if hash hub 2>/dev/null; then
-   # Test if there is already a sync PR in 
-   COUNT=$(hub api -H "Accept: application/vnd.github.v3+json" repos/openshift/${REPO_NAME}/pulls --flat \
-    | grep -c ":robot: Triggering CI on branch 'release-next' after synching to upstream/ma") || true
-   if [ "$COUNT" = "0" ]; then
-      hub pull-request --no-edit -l "kind/sync-fork-to-upstream" -b openshift/${REPO_NAME}:release-next -h openshift/${REPO_NAME}:release-next-ci
-   fi
-else
-   echo "hub (https://github.com/github/hub) is not installed, so you'll need to create a PR manually."
-fi
+# removing upstream remote so that hub points origin for hub pr list command due to this issue https://github.com/github/hub/issues/1973
+git remote remove upstream
+
+already_open_github_issue_id=$(hub pr list -s open -f "%I %l%n"|grep ${LABEL}| awk '{print $1}'|head -1)
+[[ -n ${already_open_github_issue_id} ]]  && {
+    echo "PR for nightly is already open on #${already_open_github_issue_id}"
+    #hub api repos/${OPENSHIFT_ORG}/${REPO_NAME}/issues/${already_open_github_issue_id}/comments -f body='/retest'
+    exit 0
+}
+
+hub pull-request -m "🛑🔥 Triggering Nightly CI for ${REPO_NAME} 🔥🛑" -m "/hold" -m "Nightly CI do not merge :stop_sign:" \
+    --no-edit -l "${LABEL}" -b ${OPENSHIFT_REMOTE}/${REPO_NAME}:release-next -h ${OPENSHIFT_REMOTE}/${REPO_NAME}:release-next-ci
