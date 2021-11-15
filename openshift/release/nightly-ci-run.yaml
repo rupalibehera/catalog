@@ -62,17 +62,15 @@ spec:
                 set -x
                 # Launch script
                 openshift/release/update-to-head.sh
-  finally:
-    - name: nofity-slack
-      runAfter:
-        - format-notification
-      taskRef:
-        name: send-to-webhook-slack
-      params:
-        - name: token-secret
-          value: token-secret
-        - name: message
-          value: ":done_it_is: tektoncd/catalog#main synced to rupalibehera/catalog#release-next"
+    finally:
+      - name: nofity-slack
+        taskRef:
+          name: send-to-webhook-slack
+        params:
+          - name: webhook-secret
+            value: token-secret
+          - name: message
+            value: ":done_it_is: tektoncd/catalog#main synced to rupalibehera/catalog#release-next"
   workspaces:
     - name: source
       volumeClaimTemplate:
